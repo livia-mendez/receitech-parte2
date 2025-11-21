@@ -145,6 +145,7 @@
   width: 37px;
   height: 37px;
   border-radius: 50%;
+  object-fit: cover;   
   color: var(--text-color);
   transition: transform 0.3s ease;
 }

@@ -2,6 +2,7 @@ const sequelize = require('../config/database');
 const Category = require('../models/Category');
 const Recipe   = require('../models/Recipe');
 const User     = require('../models/User');
+const Comment = require('../models/Comment');
 
 async function initDb() {
   try {
@@ -19,4 +20,5 @@ module.exports = {
   Category,
   Recipe,
   User,
+  Comment,
 };

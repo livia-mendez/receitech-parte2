@@ -1,5 +1,5 @@
 // src/controllers/recipe.controller.js
-const { Recipe } = require('../db');
+const { Recipe, Comment } = require('../db');
 
 /**
  * Gera um slug básico a partir do título
@@ -130,10 +130,9 @@ exports.show = async (req, res) => {
       return res.status(404).send('Receita não encontrada.');
     }
 
-    // transforma em objeto puro
     const recipe = recipeInstance.toJSON();
 
-    // helper para garantir que vira array
+    // helper para normalizar arrays
     const normalizeFieldToArray = (field) => {
       if (!field) return [];
       if (Array.isArray(field)) return field;
@@ -143,26 +142,122 @@ exports.show = async (req, res) => {
           const parsed = JSON.parse(field);
           return Array.isArray(parsed) ? parsed : [];
         } catch (e) {
-          console.warn('Não consegui fazer JSON.parse em:', field);
           return [];
         }
       }
-
       return [];
     };
 
     recipe.ingredients = normalizeFieldToArray(recipe.ingredients);
     recipe.steps = normalizeFieldToArray(recipe.steps);
 
+    // 🔥 BUSCA OS COMENTÁRIOS
+    const comments = await Comment.findAll({
+      where: { recipe_id: id },
+      order: [['createdAt', 'ASC']],
+    });
+
+    // 🔥 ENVIA PARA O EJS (ERA ISSO QUE FALTAVA)
     return res.render('receita', {
       title: recipe.title,
       recipe,
+      comments,   // <----- OBRIGATÓRIO!!!
     });
+
   } catch (err) {
     console.error('Erro ao carregar receita:', err);
     return res.status(500).send('Erro ao carregar receita.');
   }
 };
+
+
+// POST /receitas/:id/comentarios
+exports.addComment = async (req, res) => {
+  try {
+    const recipeId = req.params.id;
+    const { user_id, author_name, content } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: 'Comentário não pode ser vazio.' });
+    }
+
+    if (!user_id || !author_name) {
+      return res.status(400).json({ error: 'Dados do usuário são obrigatórios.' });
+    }
+
+    const comment = await Comment.create({
+      recipe_id: recipeId,
+      user_id,
+      author_name,
+      content: content.trim(),
+    });
+
+    return res.status(201).json({ comment });
+  } catch (err) {
+    console.error('Erro ao criar comentário:', err);
+    return res.status(500).json({ error: 'Erro ao criar comentário.' });
+  }
+};
+
+// PUT /receitas/:id/comentarios/:commentId
+exports.updateComment = async (req, res) => {
+  try {
+    const recipeId = req.params.id;
+    const commentId = req.params.commentId;
+    const { user_id, content } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: 'Comentário não pode ser vazio.' });
+    }
+
+    const comment = await Comment.findByPk(commentId);
+
+    if (!comment || String(comment.recipe_id) !== String(recipeId)) {
+      return res.status(404).json({ error: 'Comentário não encontrado.' });
+    }
+
+    // 🔒 Só o dono pode editar
+    if (String(comment.user_id) !== String(user_id)) {
+      return res.status(403).json({ error: 'Você não tem permissão para editar este comentário.' });
+    }
+
+    comment.content = content.trim();
+    await comment.save();
+
+    return res.json({ comment });
+  } catch (err) {
+    console.error('Erro ao atualizar comentário:', err);
+    return res.status(500).json({ error: 'Erro ao atualizar comentário.' });
+  }
+};
+
+// DELETE /receitas/:id/comentarios/:commentId
+exports.deleteComment = async (req, res) => {
+  try {
+    const recipeId = req.params.id;
+    const commentId = req.params.commentId;
+    const { user_id } = req.body;
+
+    const comment = await Comment.findByPk(commentId);
+
+    if (!comment || String(comment.recipe_id) !== String(recipeId)) {
+      return res.status(404).json({ error: 'Comentário não encontrado.' });
+    }
+
+    // 🔒 Só o dono pode excluir
+    if (String(comment.user_id) !== String(user_id)) {
+      return res.status(403).json({ error: 'Você não tem permissão para excluir este comentário.' });
+    }
+
+    await comment.destroy();
+
+    return res.status(204).send();
+  } catch (err) {
+    console.error('Erro ao excluir comentário:', err);
+    return res.status(500).json({ error: 'Erro ao excluir comentário.' });
+  }
+};
+
 
 
 /**

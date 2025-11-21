@@ -74,6 +74,7 @@ body {
 /* Detalhes (autor, tempo) */
 .detalhes-receita {
   display: flex;
+  justify-content: center;
   align-items: center;
   gap: 12px;
   margin-bottom: 32px;
@@ -117,6 +118,106 @@ ol {
   font-size: 0.95rem;
   line-height: 1.6;
 }
+
+/*Comentários*/
+
+.comentarios {
+  margin-top: 32px;
+  border-top: 1px solid #eee;
+  padding-top: 24px;
+}
+
+.comentarios h2 {
+  font-size: 1.25rem;
+  margin-bottom: 12px;
+}
+
+#form-comentario {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+#comentario-texto {
+  resize: vertical;
+  min-height: 70px;
+  max-height: 200px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+#form-comentario button {
+  align-self: flex-end;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: none;
+  background-color: var(--navbar-color);
+  color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+#form-comentario button:hover {
+  opacity: 0.9;
+}
+
+#lista-comentarios {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.comentario-item {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+}
+
+.comentario-topo {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.comentario-data {
+  font-size: 0.8rem;
+  color: #777;
+}
+
+.comentario-acoes {
+  margin-top: 6px;
+  display: flex;
+  gap: 8px;
+}
+
+.btn-edit-comment,
+.btn-delete-comment {
+  border: none;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-edit-comment {
+  background-color: #ffffff;
+  border: 1px solid #ccc;
+}
+
+.btn-delete-comment {
+  background-color: #ffdddd;
+  border: 1px solid #ffaaaa;
+}
+
+
 
 /* =========================
    RESPONSIVO

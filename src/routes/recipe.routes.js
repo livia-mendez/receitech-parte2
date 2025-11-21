@@ -22,6 +22,7 @@ router.post(
 router.get('/usuario/:userId', recipeController.listByUser);
 
 // detalhe da receita
-router.get('/:id', recipeController.show);
+router.put('/:id/comentarios/:commentId', recipeController.updateComment);
+router.delete('/:id/comentarios/:commentId', recipeController.deleteComment);
 
 module.exports = router;
