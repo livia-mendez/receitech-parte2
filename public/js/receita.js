@@ -1,7 +1,8 @@
 // public/js/receita.js
 document.addEventListener('DOMContentLoaded', () => {
-  // 🔹 Busca da navbar
+  // ================== BUSCA NA NAVBAR ==================
   const campo = document.getElementById('campo-pesquisa');
+
   campo?.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       const termo = campo.value.trim();
@@ -11,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 🔹 Usuário logado (dono ou não de comentário)
+  // ================== USUÁRIO LOGADO ==================
   let usuario = null;
   try {
     const usuarioStr = localStorage.getItem('usuario');
@@ -22,96 +23,161 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('Erro ao ler usuário do localStorage:', e);
   }
 
-  const currentUserId = usuario?.id;
+  const currentUserId = usuario?.id || null;
 
-  // 🔹 Comentários: envio e botões
+  function getUserPayload() {
+    if (!usuario) {
+      alert('Você precisa estar logado para comentar.');
+      return null;
+    }
+    return {
+      user_id: usuario.id,
+      author_name: usuario.nome || usuario.name || usuario.email,
+    };
+  }
+
+  // ID da receita pela URL: /receitas/:id
+  const partesUrl = window.location.pathname.split('/');
+  const recipeId = partesUrl[partesUrl.length - 1];
+
+  // ================== AÇÕES DA RECEITA (EDITAR/EXCLUIR) ==================
+  const blocoAcoesReceita = document.querySelector('.receita-acoes');
+  const btnEditarReceita = document.querySelector('.btn-editar-receita');
+  const btnExcluirReceita = document.querySelector('.btn-excluir-receita');
+
+  if (blocoAcoesReceita) {
+    const autorId = blocoAcoesReceita.dataset.authorId;
+
+    // Só mostra o bloco se o usuário logado for o autor
+    if (currentUserId && String(currentUserId) === String(autorId)) {
+      blocoAcoesReceita.style.display = 'flex';
+    } else {
+      blocoAcoesReceita.style.display = 'none';
+    }
+  }
+
+  // EDITAR RECEITA – redireciona para a página que parece pop-up
+  btnEditarReceita?.addEventListener('click', () => {
+    if (!usuario) {
+      alert('Você precisa estar logado para editar esta receita.');
+      return;
+    }
+    window.location.href = `/receitas/${recipeId}/editar`;
+  });
+
+  // EXCLUIR RECEITA
+  btnExcluirReceita?.addEventListener('click', async () => {
+    if (!usuario) {
+      alert('Você precisa estar logado para excluir esta receita.');
+      return;
+    }
+
+    const confirmar = window.confirm('Tem certeza que deseja excluir esta receita?');
+    if (!confirmar) return;
+
+    try {
+      const resp = await fetch(`/receitas/${recipeId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: usuario.id,
+        }),
+      });
+
+      if (!resp.ok && resp.status !== 204) {
+        const data = await resp.json().catch(() => ({}));
+        alert(data.error || 'Erro ao excluir receita.');
+        return;
+      }
+
+      window.location.href = '/perfil';
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao excluir receita.');
+    }
+  });
+
+  // ================== ELEMENTOS DE COMENTÁRIOS ==================
   const form = document.getElementById('form-comentario');
   const textarea = document.getElementById('comentario-texto');
   const lista = document.getElementById('lista-comentarios');
 
-  // pega ID da receita pela URL: /receitas/:id
-  const partes = window.location.pathname.split('/');
-  const recipeId = partes[partes.length - 1];
-
-  // Mostra botões de editar/excluir só para comentários do usuário logado
+  // Controla visibilidade dos botões (só para comentários do usuário logado)
   function aplicarPermissoesComentarios() {
-    if (!currentUserId || !lista) return;
+    const itensComentario = document.querySelectorAll('.comentario-item');
 
-    const itens = lista.querySelectorAll('.comentario-item');
-    itens.forEach((li) => {
-      const donoId = li.dataset.userId;
-      const btnEdit = li.querySelector('.btn-edit-comment');
-      const btnDelete = li.querySelector('.btn-delete-comment');
+    itensComentario.forEach((item) => {
+      const acoes = item.querySelector('.comentario-acoes');
+      if (!acoes) return;
 
-      if (String(donoId) === String(currentUserId)) {
-        if (btnEdit) btnEdit.style.display = 'inline-block';
-        if (btnDelete) btnDelete.style.display = 'inline-block';
+      const donoId = item.dataset.commentUserId;
+      if (!currentUserId || String(currentUserId) !== String(donoId)) {
+        acoes.style.display = 'none';
+      } else {
+        acoes.style.display = 'flex';
       }
     });
   }
 
+  // Aplica nas linhas que vieram do servidor
   aplicarPermissoesComentarios();
 
-  // Envio de novo comentário
+  // ================== CRIAR COMENTÁRIO ==================
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const texto = textarea.value.trim();
     if (!texto) return;
 
-    if (!usuario) {
-      alert('Você precisa estar logado para comentar.');
-      return;
-    }
+    const userPayload = getUserPayload();
+    if (!userPayload) return;
 
     try {
-      const res = await fetch(`/receitas/${recipeId}/comentarios`, {
+      const resp = await fetch(`/receitas/${recipeId}/comentarios`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          ...userPayload,
           content: texto,
-          user_id: usuario.id,
-          author_name: usuario.name,
         }),
       });
 
-      const data = await res.json();
+      const data = await resp.json();
 
-      if (!res.ok) {
+      if (!resp.ok) {
         alert(data.error || 'Erro ao enviar comentário.');
         return;
       }
 
       const c = data.comment;
-
-      // monta novo comentário na tela
       const li = document.createElement('li');
       li.className = 'comentario-item';
       li.dataset.commentId = c.id;
-      li.dataset.userId = c.user_id;
+      li.dataset.commentUserId = c.user_id;
+
+      const dataCriacao = new Date(c.created_at || c.createdAt);
 
       li.innerHTML = `
-        <div class="comentario-topo">
-          <div class="comentario-autor">
+        <div class="comentario-conteudo">
+          <div class="comentario-topo">
             <strong>${c.author_name}</strong>
+            <span class="comentario-data">
+              ${dataCriacao.toLocaleDateString('pt-BR')}
+            </span>
           </div>
-          <span class="comentario-data">
-            ${new Date(c.createdAt).toLocaleDateString('pt-BR')}
-          </span>
+          <p class="comentario-texto">${c.content}</p>
         </div>
-        <p class="comentario-conteudo">${c.content}</p>
         <div class="comentario-acoes">
-          <button type="button" class="btn-edit-comment" style="display:none;">Editar</button>
-          <button type="button" class="btn-delete-comment" style="display:none;">Excluir</button>
+          <button type="button" class="btn-editar-comentario">Editar</button>
+          <button type="button" class="btn-excluir-comentario">Excluir</button>
         </div>
       `;
 
-      // adiciona no topo
-      lista.prepend(li);
-
+      lista?.appendChild(li);
       textarea.value = '';
 
-      // reaplica permissão (vai mostrar os botões pro dono)
       aplicarPermissoesComentarios();
     } catch (err) {
       console.error(err);
@@ -119,59 +185,75 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Clique em editar/excluir (delegação de eventos)
+  // ================== EDITAR / EXCLUIR COMENTÁRIO (DELEGAÇÃO) ==================
   lista?.addEventListener('click', async (e) => {
-    const btn = e.target;
+    const btn = e.target.closest('button');
+    if (!btn) return;
+
     const li = btn.closest('.comentario-item');
-    if (!li || !usuario) return;
+    if (!li) return;
 
     const commentId = li.dataset.commentId;
+    const commentUserId = li.dataset.commentUserId;
 
-    // EDITAR
-    if (btn.classList.contains('btn-edit-comment')) {
-      const p = li.querySelector('.comentario-conteudo');
-      const atual = p?.textContent || '';
+    if (!usuario || String(usuario.id) !== String(commentUserId)) {
+      alert('Você não pode alterar este comentário.');
+      return;
+    }
 
-      const novo = window.prompt('Edite seu comentário:', atual);
-      if (novo === null) return;
+    const pTexto = li.querySelector('.comentario-texto');
+    if (!pTexto) return;
 
-      const textoNovo = novo.trim();
-      if (!textoNovo) {
-        alert('Comentário não pode ser vazio.');
-        return;
-      }
+    // -------- EDITAR --------
+    if (btn.classList.contains('btn-editar-comentario')) {
+      const isEditing = li.classList.contains('editing');
 
-      try {
-        const res = await fetch(`/receitas/${recipeId}/comentarios/${commentId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            content: textoNovo,
-            user_id: usuario.id,
-          }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          alert(data.error || 'Erro ao editar comentário.');
+      if (!isEditing) {
+        li.classList.add('editing');
+        pTexto.contentEditable = 'true';
+        pTexto.focus();
+        btn.textContent = 'Salvar';
+      } else {
+        const novoTexto = pTexto.textContent.trim();
+        if (!novoTexto) {
+          alert('Comentário não pode ficar vazio.');
           return;
         }
 
-        if (p) p.textContent = data.comment.content;
-      } catch (err) {
-        console.error(err);
-        alert('Erro ao editar comentário.');
+        try {
+          const resp = await fetch(`/receitas/${recipeId}/comentarios/${commentId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: usuario.id,
+              content: novoTexto,
+            }),
+          });
+
+          const data = await resp.json();
+
+          if (!resp.ok) {
+            alert(data.error || 'Erro ao atualizar comentário.');
+            return;
+          }
+
+          li.classList.remove('editing');
+          pTexto.contentEditable = 'false';
+          btn.textContent = 'Editar';
+        } catch (err) {
+          console.error(err);
+          alert('Erro ao atualizar comentário.');
+        }
       }
     }
 
-    // EXCLUIR
-    if (btn.classList.contains('btn-delete-comment')) {
-      const confirmar = window.confirm('Deseja realmente excluir este comentário?');
+    // -------- EXCLUIR --------
+    if (btn.classList.contains('btn-excluir-comentario')) {
+      const confirmar = window.confirm('Tem certeza que deseja excluir este comentário?');
       if (!confirmar) return;
 
       try {
-        const res = await fetch(`/receitas/${recipeId}/comentarios/${commentId}`, {
+        const resp = await fetch(`/receitas/${recipeId}/comentarios/${commentId}`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -179,8 +261,8 @@ document.addEventListener('DOMContentLoaded', () => {
           }),
         });
 
-        if (!res.ok && res.status !== 204) {
-          const data = await res.json().catch(() => ({}));
+        if (!resp.ok && resp.status !== 204) {
+          const data = await resp.json().catch(() => ({}));
           alert(data.error || 'Erro ao excluir comentário.');
           return;
         }

@@ -5,8 +5,8 @@ const sequelize = require('../config/database');
 const Comment = sequelize.define('Comment', {
   id: {
     type: DataTypes.INTEGER.UNSIGNED,
-    autoIncrement: true,
     primaryKey: true,
+    autoIncrement: true,
   },
   recipe_id: {
     type: DataTypes.INTEGER.UNSIGNED,
@@ -24,9 +24,19 @@ const Comment = sequelize.define('Comment', {
     type: DataTypes.TEXT,
     allowNull: false,
   },
+  created_at: {
+    type: DataTypes.DATE,
+    allowNull: false,
+  },
+  updated_at: {
+    type: DataTypes.DATE,
+    allowNull: false,
+  },
 }, {
   tableName: 'comments',
-  timestamps: true, // createdAt / updatedAt
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
 });
 
 module.exports = Comment;

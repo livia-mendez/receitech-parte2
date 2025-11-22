@@ -1,5 +1,5 @@
 // src/controllers/recipe.controller.js
-const { Recipe, Comment } = require('../db');
+const { Recipe, Comment, User } = require('../db');
 
 /**
  * Gera um slug básico a partir do título
@@ -119,11 +119,15 @@ exports.create = async (req, res) => {
  * GET /receitas/:id
  * Mostra a receita em uma página
  */
-// src/controllers/recipe.controller.js
+/**
+ * GET /receitas/:id
+ * Mostra a receita em uma página
+ */
 exports.show = async (req, res) => {
   try {
     const id = req.params.id;
 
+    // 👇 sem include de User, só a receita
     const recipeInstance = await Recipe.findByPk(id);
 
     if (!recipeInstance) {
@@ -140,9 +144,9 @@ exports.show = async (req, res) => {
       if (typeof field === 'string') {
         try {
           const parsed = JSON.parse(field);
-          return Array.isArray(parsed) ? parsed : [];
+          return Array.isArray(parsed) ? parsed : [field];
         } catch (e) {
-          return [];
+          return [field];
         }
       }
       return [];
@@ -154,14 +158,14 @@ exports.show = async (req, res) => {
     // 🔥 BUSCA OS COMENTÁRIOS
     const comments = await Comment.findAll({
       where: { recipe_id: id },
-      order: [['createdAt', 'ASC']],
+      order: [['created_at', 'ASC']],
     });
 
-    // 🔥 ENVIA PARA O EJS (ERA ISSO QUE FALTAVA)
+    // 🔥 ENVIA PARA O EJS
     return res.render('receita', {
       title: recipe.title,
-      recipe,
-      comments,   // <----- OBRIGATÓRIO!!!
+      recipe,   // já tem user_id, author_name, etc.
+      comments,
     });
 
   } catch (err) {
@@ -169,6 +173,53 @@ exports.show = async (req, res) => {
     return res.status(500).send('Erro ao carregar receita.');
   }
 };
+
+
+/**
+ * GET /receitas/:id/editar
+ * Mostra formulário para editar a receita
+ */
+exports.editForm = async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const recipeInstance = await Recipe.findByPk(id);
+    if (!recipeInstance) {
+      return res.status(404).send('Receita não encontrada.');
+    }
+
+    const recipe = recipeInstance.toJSON();
+
+    const normalizeFieldToArray = (field) => {
+      if (!field) return [];
+      if (Array.isArray(field)) return field;
+
+      if (typeof field === 'string') {
+        try {
+          const parsed = JSON.parse(field);
+          return Array.isArray(parsed) ? parsed : [field];
+        } catch (e) {
+          return [field];
+        }
+      }
+      return [];
+    };
+
+    const ingredientes = normalizeFieldToArray(recipe.ingredients);
+    const passos = normalizeFieldToArray(recipe.steps);
+
+    return res.render('editar-receita', {
+      title: `Editar: ${recipe.title}`,
+      recipe,
+      ingredientes,
+      passos,
+    });
+  } catch (err) {
+    console.error('Erro ao carregar formulário de edição:', err);
+    return res.status(500).send('Erro ao carregar formulário de edição.');
+  }
+};
+
 
 
 // POST /receitas/:id/comentarios
@@ -258,8 +309,6 @@ exports.deleteComment = async (req, res) => {
   }
 };
 
-
-
 /**
  * (Opcional) listar receitas em uma página de lista
  */
@@ -300,5 +349,117 @@ exports.listByUser = async (req, res) => {
   } catch (err) {
     console.error('Erro ao listar receitas do usuário:', err);
     return res.status(500).json({ error: 'Erro ao listar receitas do usuário.' });
+  }
+};
+
+/**
+ * PUT /receitas/:id
+ * Atualiza uma receita (servidor confere se o user é o dono)
+ * OBS: aqui só deixei preparado; você pode ligar isso à tela de edição depois
+ */
+exports.update = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const {
+      title,
+      category,
+      subcategory,
+      description,
+      ingredients,
+      steps,
+      prep_time_min,
+      tip,
+      servings,
+      user_id,
+    } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ error: 'Usuário não informado.' });
+    }
+
+    const recipe = await Recipe.findByPk(id);
+
+    if (!recipe) {
+      return res.status(404).json({ error: 'Receita não encontrada.' });
+    }
+
+    // 🔒 Só o dono pode editar
+    if (String(recipe.user_id) !== String(user_id)) {
+      return res.status(403).json({ error: 'Você não tem permissão para editar esta receita.' });
+    }
+
+    let ingredientsArr = recipe.ingredients;
+    let stepsArr = recipe.steps;
+
+    try {
+      if (ingredients) ingredientsArr = JSON.parse(ingredients);
+      if (steps) stepsArr = JSON.parse(steps);
+    } catch (e) {
+      return res
+        .status(400)
+        .json({ error: 'Formato inválido de ingredientes ou modo de preparo.' });
+    }
+
+    if (!Array.isArray(ingredientsArr) || ingredientsArr.length === 0) {
+      return res
+        .status(400)
+        .json({ error: 'Informe pelo menos um ingrediente.' });
+    }
+
+    if (!Array.isArray(stepsArr) || stepsArr.length === 0) {
+      return res
+        .status(400)
+        .json({ error: 'Informe pelo menos uma etapa de preparo.' });
+    }
+
+    recipe.title = title ?? recipe.title;
+    recipe.category = category ?? recipe.category;
+    recipe.subcategory = subcategory ?? recipe.subcategory;
+    recipe.description = description ?? recipe.description;
+    recipe.ingredients = ingredientsArr;
+    recipe.steps = stepsArr;
+    recipe.prep_time_min = prep_time_min ?? recipe.prep_time_min;
+    recipe.tip = tip ?? recipe.tip;
+    recipe.servings = servings ?? recipe.servings;
+
+    await recipe.save();
+
+    return res.json({ recipe });
+  } catch (err) {
+    console.error('Erro ao atualizar receita:', err);
+    return res.status(500).json({ error: 'Erro ao atualizar receita.' });
+  }
+};
+
+/**
+ * DELETE /receitas/:id
+ * Exclui uma receita (só o autor)
+ */
+exports.delete = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ error: 'Usuário não informado.' });
+    }
+
+    const recipe = await Recipe.findByPk(id);
+
+    if (!recipe) {
+      return res.status(404).json({ error: 'Receita não encontrada.' });
+    }
+
+    // 🔒 Só o dono pode excluir
+    if (String(recipe.user_id) !== String(user_id)) {
+      return res.status(403).json({ error: 'Você não tem permissão para excluir esta receita.' });
+    }
+
+    await recipe.destroy();
+
+    return res.status(204).send();
+  } catch (err) {
+    console.error('Erro ao excluir receita:', err);
+    return res.status(500).json({ error: 'Erro ao excluir receita.' });
   }
 };
