@@ -13,6 +13,9 @@ async function initDb() {
   }
 }
 
+Recipe.hasMany(Comment, { foreignKey: 'recipe_id', as: 'Comments' });
+Comment.belongsTo(Recipe, { foreignKey: 'recipe_id', as: 'Recipe' });
+
 initDb();
 
 module.exports = {
@@ -22,3 +25,4 @@ module.exports = {
   User,
   Comment,
 };
+

@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
-    <!-- Usa sempre "title" vindo do app.js -->
     <title><%= title || 'Receita Tech' %></title>
 
     <link
@@ -23,14 +22,13 @@
   <body>
     <%- include('partials/_navbar') %>
 
-
     <main>
       <!-- GRID DE RECEITAS -->
       <section class="receitas-grid">
         <% (receitas || []).forEach(function(r){ %>
           <a
             class="receita-card"
-            href="/receita/<%= r.id %>"
+            href="/receitas/<%= r.id %>"
             data-categoria="<%= r.categoria || '' %>"
           >
             <img
@@ -42,28 +40,48 @@
               <h3><%= r.titulo %></h3>
               <div class="tempo">
                 <img src="/assets/icon-tempo.png" alt="Relógio" />
-                <span><%= r.tempo %></span>
+                <span><%= formatTempo(r.tempo) %></span>
               </div>
             </div>
           </a>
         <% }); %>
       </section>
 
-      <!-- CATEGORIAS EM BOLINHAS -->
+      <!-- CATEGORIAS EM BOLINHAS (fixas na view) -->
+      <%
+        const categoriasBolinhas = [
+          'Bolos e tortas',
+          'Carnes',
+          'Aves',
+          'Peixes e frutos do mar',
+          'Saladas e molhos',
+          'Sopas',
+          'Massas',
+          'Bebidas',
+          'Lanches',
+          'Doces e sobremesas',
+        ];
+
+        const catImg = {
+          'Bolos e tortas': 'cat-bolos-tortas.png',
+          'Carnes': 'cat-carnes.png',
+          'Aves': 'cat-aves.jpg',
+          'Peixes e frutos do mar': 'cat-peixes.jpg',
+          'Saladas e molhos': 'cat-saladas.jpg',
+          'Sopas': 'cat-sopas.jpg',
+          'Massas': 'cat-massas.png',
+          'Bebidas': 'cat-bebidas.jpg',
+          'Lanches': 'cat-lanches.jpg',
+          'Doces e sobremesas': 'cat-doces.jpg',
+        };
+      %>
+
       <section class="categorias-container">
-        <%
-          var catImg = {
-            'Sobremesas': 'categoria-sobremesa.png',
-            'Almoço': 'categoria-almoco.png',
-            'Fitness': 'categoria-fit.png',
-            'Lanches': 'categoria-lanche.png'
-          };
-        %>
-        <% (categorias || []).forEach(function(c){ %>
+        <% categoriasBolinhas.forEach(function(c){ %>
           <div class="categoria bolinha-categoria" data-categoria="<%= c %>">
             <button class="btn-categoria">
               <img
-                src="/assets/<%= catImg[c] || 'categoria-lanche.png' %>"
+                src="/assets/categorias/<%= catImg[c] || 'cat-default.png' %>"
                 alt="<%= c %>"
               />
               <p><%= c %></p>
@@ -72,7 +90,7 @@
         <% }); %>
       </section>
     </main>
-
+    
     <footer class="footer">
       <p>&copy; 2025 Receita Tech. Todos os direitos reservados.</p>
     </footer>

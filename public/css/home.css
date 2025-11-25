@@ -125,12 +125,17 @@ main {
    CATEGORIAS
 ========================= */
 .categorias-container {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 2rem;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr); /* 5 colunas iguais */
+  gap: 2rem; /* espaçamento igual entre todas */
+  justify-items: center; /* centraliza cada bolinha na célula */
   padding: 2rem 2rem 2.5rem 2rem;
 }
+
+.categoria {
+  text-align: center;
+}
+
 
 .categoria {
   display: flex;

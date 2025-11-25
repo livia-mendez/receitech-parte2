@@ -21,23 +21,9 @@
       // Avatar do autor
       const avatarUrl = recipe.author_avatar || '/assets/icon-perfil.svg';
 
-      // Função para formatar tempo (min → min / horas)
-      function formatTempo(t) {
-        if (!t) return '—';
-        const n = parseInt(t, 10);
-        if (isNaN(n)) return t;
+    
 
-        if (n < 60) return `${n} min`;
-
-        const h = Math.floor(n / 60);
-        const m = n % 60;
-
-        if (m === 0) return `${h} h`;
-        return `${h} h ${m} min`;
-      }
-
-      const tempoFormatado = formatTempo(recipe.prep_time_min);
-    %>
+    <span><%= formatTempo(recipe.prep_time_min) %></span>
 
 
     <h1 id="nome-receita"><%= recipe.title %></h1>
