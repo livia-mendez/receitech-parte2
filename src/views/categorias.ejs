@@ -2,6 +2,27 @@
 <link rel="stylesheet" href="/css/categorias.css">
 <%- include('partials/_navbar') %>
 
+<%
+  function formatTempo(min) {
+    if (!min) return '';
+    const total = Number(min);
+    if (Number.isNaN(total)) return '';
+
+    if (total < 60) {
+      return total + ' min';
+    }
+
+    const horas = Math.floor(total / 60);
+    const minutos = total % 60;
+
+    if (minutos === 0) {
+      return `${horas} h`;
+    }
+
+    return `${horas} h ${minutos} min`;
+  }
+%>
+
 <body>
   <main style="position:relative;">
     <div class="voltar-container">
@@ -34,7 +55,7 @@
               <h3 title="<%= recipe.title %>"><%= recipe.title %></h3>
               <div class="tempo">
                 <img src="/assets/icon-tempo.svg" alt="Tempo">
-                <span><%= recipe.prep_time_min || '' %></span>
+                <span><%= formatTempo(recipe.prep_time_min) %></span>
               </div>
             </div>
           </div>

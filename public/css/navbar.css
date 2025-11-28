@@ -114,7 +114,6 @@
 }
 
 .categorias-dropdown .dropdown-toggle::after {
-  content: " ▼";
   font-size: 0.7rem;
 }
 

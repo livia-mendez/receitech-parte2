@@ -1,181 +1,75 @@
 // public/js/navbar.js
 document.addEventListener('DOMContentLoaded', () => {
-  // =========================
-  // ÍCONE / LOGIN DO USUÁRIO
-  // =========================
-  const userLink =
-    document.getElementById('user-link') ||
-    document.querySelector('.user-icon');
+  // ====== BUSCA NA NAVBAR (Enter) ======
+  const campoPesquisa = document.getElementById('campo-pesquisa');
 
-  const userImg =
-    document.querySelector('.user-icon img') ||
-    (userLink ? userLink.querySelector('img') : null);
-
-  if (userLink && userImg) {
-    const usuarioStr = localStorage.getItem('usuario');
-    const token      = localStorage.getItem('token');
-
-    if (usuarioStr && token) {
-      try {
-        const usuario = JSON.parse(usuarioStr);
-
-        if (usuario.avatar_url) {
-          userImg.src = usuario.avatar_url;
-        } else if (usuario.fotoPerfil) {
-          userImg.src = usuario.fotoPerfil;
+  if (campoPesquisa) {
+    campoPesquisa.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        const termo = this.value.trim();
+        if (termo) {
+          // versão Node/Express: rota /pesquisa
+          window.location.href = `/pesquisa?termo=${encodeURIComponent(termo)}`;
         }
-      } catch (e) {
-        console.warn('Erro ao ler usuario do localStorage:', e);
-      }
-    }
-
-    userLink.addEventListener('click', (e) => {
-      e.preventDefault();
-
-      const usuarioStrAtual = localStorage.getItem('usuario');
-      const tokenAtual      = localStorage.getItem('token');
-
-      if (usuarioStrAtual && tokenAtual) {
-        window.location.href = '/perfil';
-      } else {
-        window.location.href = '/register';
       }
     });
   }
 
-  // =========================
-  // DROPDOWN DE CATEGORIAS
-  // =========================
+  // ====== FOTO DO USUÁRIO NA NAVBAR ======
+  let usuario = null;
+  try {
+    const usuarioStr = localStorage.getItem('usuario');
+    if (usuarioStr) {
+      usuario = JSON.parse(usuarioStr);
+    }
+  } catch (err) {
+    console.error('Erro ao ler usuário do localStorage:', err);
+  }
 
-  // mesmo mapa de categorias/subcategorias que você usa no resto do app
-  const mapaCategorias = {
-    "Bolos e tortas": [
-      "Bolos simples",
-      "Bolos recheados",
-      "Tortas doces",
-      "Tortas salgadas"
-    ],
-    "Carnes": [
-      "Bovina",
-      "Suína",
-      "Carne moída",
-      "Churrasco"
-    ],
-    "Aves": [
-      "Frango",
-      "Peru",
-      "Frango desfiado"
-    ],
-    "Peixes e frutos do mar": [
-      "Peixes",
-      "Camarão",
-      "Frutos do mar variados"
-    ],
-    "Saladas e molhos": [
-      "Saladas frias",
-      "Saladas quentes",
-      "Molhos para salada"
-    ],
-    "Sopas": [
-      "Sopas leves",
-      "Caldos"
-    ],
-    "Massas": [
-      "Macarrão",
-      "Lasanha",
-      "Nhoque"
-    ],
-    "Bebidas": [
-      "Sucos",
-      "Drinks",
-      "Sem álcool"
-    ],
-    "Lanches": [
-      "Sanduíches",
-      "Hambúrguer",
-      "Salgados assados"
-    ],
-    "Doces e sobremesas": [
-      "Pudins",
-      "Mousses",
-      "Gelatinas",
-      "Brigadeiro"
-    ],
-    "Alimentação saudável": [
-      "Low carb",
-      "Vegetariano",
-      "Vegano",
-      "Fit"
-    ]
-  };
+  if (usuario && usuario.fotoPerfil) {
+    // tenta achar primeiro na home (.perfil-navbar)
+    let navbarIcon = document.querySelector('.perfil-navbar');
 
-  const menu   = document.getElementById('categorias-menu');
-  const toggle = document.getElementById('dropdownMenu2');
-
-  if (!menu || !toggle) return;
-
-  // Monta o menu (categoria + submenu de subcategorias)
-  Object.entries(mapaCategorias).forEach(([categoria, subcats]) => {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'categoria-item';
-
-    const btnCat = document.createElement('button');
-    btnCat.type = 'button';
-    btnCat.className = 'dropdown-item';
-    btnCat.dataset.categoria = categoria;
-    btnCat.textContent = categoria;
-    wrapper.appendChild(btnCat);
-
-    if (subcats && subcats.length) {
-      const submenu = document.createElement('div');
-      submenu.className = 'dropdown-submenu';
-
-      subcats.forEach((sub) => {
-        const subBtn = document.createElement('button');
-        subBtn.type = 'button';
-        subBtn.className = 'dropdown-subitem';
-        subBtn.dataset.categoria = categoria;
-        subBtn.dataset.subcategoria = sub;
-        subBtn.textContent = sub;
-        submenu.appendChild(subBtn);
-      });
-
-      wrapper.appendChild(submenu);
+    // se for outra página que usa .user-icon img, pega ela
+    if (!navbarIcon) {
+      navbarIcon = document.querySelector('.user-icon img');
     }
 
-    menu.appendChild(wrapper);
+    if (navbarIcon) {
+      navbarIcon.src = usuario.fotoPerfil;
+    }
+  }
+
+  // (opcional) ajustar link do usuário
+  const userLink = document.getElementById('user-link');
+  if (userLink) {
+    if (usuario) {
+      // ajusta conforme sua rota real
+      userLink.href = `/perfil`;
+    } else {
+      userLink.href = `/login`;
+    }
+  }
+
+  // ====== CATEGORIAS DO DROPDOWN ======
+  document.querySelectorAll('.dropdown-item[data-categoria]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const categoria = btn.dataset.categoria || btn.textContent.trim();
+      if (!categoria) return;
+      window.location.href = `/categorias?categoria=${encodeURIComponent(categoria)}`;
+    });
   });
 
-  // Abre/fecha o dropdown
-  toggle.addEventListener('click', (e) => {
-    e.stopPropagation();
-    menu.classList.toggle('show');
-  });
+  document.querySelectorAll('.dropdown-subitem').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const categoria = btn.dataset.categoria;
+      const subcategoria = btn.dataset.subcategoria;
+      if (!categoria) return;
 
-  // Clicar fora fecha o menu
-  document.addEventListener('click', (e) => {
-    if (!menu.contains(e.target) && e.target !== toggle) {
-      menu.classList.remove('show');
-    }
-  });
+      const params = new URLSearchParams({ categoria });
+      if (subcategoria) params.append('subcategoria', subcategoria);
 
-  // Navegação ao clicar nas categorias / subcategorias
-  menu.addEventListener('click', (e) => {
-    const subBtn = e.target.closest('.dropdown-subitem');
-    const catBtn = e.target.closest('.dropdown-item');
-
-    if (subBtn) {
-      const categoria    = subBtn.dataset.categoria;
-      const subcategoria = subBtn.dataset.subcategoria;
-      window.location.href =
-        `/categorias?categoria=${encodeURIComponent(categoria)}&subcategoria=${encodeURIComponent(subcategoria)}`;
-      return;
-    }
-
-    if (catBtn) {
-      const categoria = catBtn.dataset.categoria;
-      window.location.href =
-        `/categorias?categoria=${encodeURIComponent(categoria)}`;
-    }
+      window.location.href = `/categorias?${params.toString()}`;
+    });
   });
 });
