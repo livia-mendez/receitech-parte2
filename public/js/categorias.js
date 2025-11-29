@@ -6,9 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const categoria = (btn.dataset.categoria || btn.textContent.trim()).trim();
       if (!categoria) return;
 
-      // 👇 CASO ESPECIAL: TODAS AS RECEITAS
       if (categoria.toLowerCase() === 'todas as receitas') {
-        window.location.href = '/categorias'; // sem filtro
+        window.location.href = '/categorias';
         return;
       }
 
@@ -23,7 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const categoria = bolinha.dataset.categoria;
       if (!categoria) return;
 
-      // se algum dia tiver bolinha "Todas as receitas"
       if (categoria.toLowerCase() === 'todas as receitas') {
         window.location.href = '/categorias';
         return;
@@ -31,15 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       window.location.href =
         `/categorias?categoria=${encodeURIComponent(categoria)}`;
-    });
-  });
-
-  // Clique no card leva pra página da receita
-  document.querySelectorAll('.card-receita').forEach((card) => {
-    card.addEventListener('click', () => {
-      const id = card.dataset.recipeId;
-      if (!id) return;
-      window.location.href = `/receitas/${id}`;
     });
   });
 });
